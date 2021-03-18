@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="utf-8"/>
+        <title>San Diego COVID-19 Vaccinations By ZIP Code</title>
+        <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://pym.nprapps.org/pym.v1.min.js" type="text/javascript"></script>
+        <script src="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.js"></script>
+        <link href="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.css" rel="stylesheet"/>
+
+
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: sans-serif;
+            }
+
+            #map {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+            }
+
+            #console {
+                position: absolute;
+                top: 40px;
+                width: 90%;
+                max-width: 400px;
+                margin: 10px 0;
+                padding: 10px 20px;
+                background-color: #858f98;
+                font-size: 18px;
+            }
+
+            #legend-colors {
+                display: flex;
+                justify-content: space-between;
+                font-size: 15px;
+                text-align: center;
+
+            }
+
+            .popup-stats {
+                padding-left: 0;
+                list-style-type: none;
+            }
+
+
+            .color {
+                text-align: center;
+                padding: 5px 2px;
+                color: #f7f8f8;
+                width: 100%;
+                height: 100%;
+            }
+            .expand {
+                text-align: right;
+                padding-top: 15px;
+                font-size: small;
+            }
+            .expand:hover {
+                color: #003552;
+                text-decoration: underline;
+            }
+
+            .data-container {
+                position: absolute;
+                top: 40px;
+                right: 0;
+                width: 18em;
+                padding: 0.5em 0.75em;
+                background: #fff;
+                display: none;
+            }
+
+            .data-container th {
+                text-align: right;
+                padding: 0 0.5em;
+            }
+
+            .legend-title {
+                margin: 0 0 10px;
+            }
+            @media only screen and(max-width: 600px) {
+                .map-container {
+                    height: 300px;
+                }
+                #console {
+                    top: 0;
+                    max-width: 50px;
+                    padding: 2px 15px 5px 5px;
+                    font-size: 10px;
+                }
+                .data-container {
+                    top: 0;
+                    font-size: 10px;
+                }
+                #legend-colors {
+                    flex-direction: column;
+                    width: 45px;
+                    font-size: 10px;
+                }
+            }
+        </style>
+
+    </head>
+
+    <body>
+        <div class="map-container">
+            <div id="map"></div>
+            <div id="console">
+                <h4 class="legend-title" style="color:white">COVID-19 Vaccinations In San Diego County</h4>
+                <div class="row colors" id="legend-colors"></div>
+            </div>
+            <div class="data-container"></div>
+        </div>
+        <div class="table-container">
+            <table id="zip-codes-table" class="hover order-column stripe" width="100%"></table>
+        </div>
+
+
+        <script>
+            mapboxgl.accessToken = "pk.eyJ1Ijoia3BicyIsImEiOiJVeTdZaXQwIn0.dVQOrpLAVtWbq4TMAQEguQ";
+
+            class covidZipMap {
+                constructor() {
+                    this.map = new mapboxgl.Map({
+                        container: "map",
+                        style: "mapbox://styles/kpbs/ck8kmxxst14ao1jjuyybenegv",
+                        center: [
+                            -116.8, 32.835
+                        ],
+                        zoom: 8.2
+                    });
+
+                    this.dataContainer = document.querySelector(".data-container");
+
+                    this.initData();
+                    this.initMap();
+                }
+
+                initData() {
+                    this.data = [
+                        {
+                            "zip": "92118",
+                            "count": 5654,
+                            "rate_per_100k": 314.9,
+                            "pct_pop": 31.49,
+                            "pop": 17955,
+                            "city": "Coronado"
+                        },
+                        {
+                            "zip": "92014",
+                            "count": 4123,
+                            "rate_per_100k": 291.6,
+                            "pct_pop": 29.16,
+                            "pop": 14139,
+                            "city": "Del Mar"
+                        },
+                        {
+                            "zip": "92037",
+                            "count": 11831,
+                            "rate_per_100k": 273.3,
+                            "pct_pop": 27.33,
+                            "pop": 43289,
+                            "city": "La Jolla"
+                        },
+                        {
+                            "zip": "92075",
+                            "count": 3217,
+                            "rate_per_100k": 247.9,
+                            "pct_pop": 24.79,
+                            "pop": 12977,
+                            "city": "Solana Beach"
+                        }, {
+                            "zip": "91902",
+                            "count": 4094,
+                            "rate_per_100k": 232.2,
+                            "pct_pop": 23.22,
+                            "pop": 17631,
+                            "city": "Bonita"
+                        }, {
+                            "zip": "92103",
+                            "count": 8225,
+                            "rate_per_100k": 207.2,
+                            "pct_pop": 20.72,
+                            "pop": 39696,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92131",
+                            "count": 7409,
+                            "rate_per_100k": 205.3,
+                            "pct_pop": 20.53,
+                            "pop": 36089,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92120",
+                            "count": 5983,
+                            "rate_per_100k": 203.2,
+                            "pct_pop": 20.32,
+                            "pop": 29444,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92128",
+                            "count": 10453,
+                            "rate_per_100k": 202,
+                            "pct_pop": 20.2,
+                            "pop": 51748,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92119",
+                            "count": 4747,
+                            "rate_per_100k": 200,
+                            "pct_pop": 20,
+                            "pop": 23735,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92007",
+                            "count": 2290,
+                            "rate_per_100k": 199.4,
+                            "pct_pop": 19.94,
+                            "pop": 11484,
+                            "city": "Cardiff By The Sea"
+                        }, {
+                            "zip": "91914",
+                            "count": 3316,
+                            "rate_per_100k": 197.6,
+                            "pct_pop": 19.76,
+                            "pop": 16781,
+                            "city": "Chula Vista"
+                        }, {
+                            "zip": "92106",
+                            "count": 4367,
+                            "rate_per_100k": 196.6,
+                            "pct_pop": 19.66,
+                            "pop": 22213,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92011",
+                            "count": 4615,
+                            "rate_per_100k": 192.6,
+                            "pct_pop": 19.26,
+                            "pop": 23962,
+                            "city": "Carlsbad"
+                        }, {
+                            "zip": "92130",
+                            "count": 11034,
+                            "rate_per_100k": 185.2,
+                            "pct_pop": 18.52,
+                            "pop": 59579,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92173",
+                            "count": 4988,
+                            "rate_per_100k": 184.1,
+                            "pct_pop": 18.41,
+                            "pop": 27094,
+                            "city": "San Ysidro"
+                        }, {
+                            "zip": "91941",
+                            "count": 6221,
+                            "rate_per_100k": 181.8,
+                            "pct_pop": 18.18,
+                            "pop": 34219,
+                            "city": "La Mesa"
+                        }, {
+                            "zip": "92122",
+                            "count": 8899,
+                            "rate_per_100k": 181.8,
+                            "pct_pop": 18.18,
+                            "pop": 48949,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92010",
+                            "count": 3031,
+                            "rate_per_100k": 181.7,
+                            "pct_pop": 18.17,
+                            "pop": 16681,
+                            "city": "Carlsbad"
+                        }, {
+                            "zip": "92024",
+                            "count": 10058,
+                            "rate_per_100k": 178.4,
+                            "pct_pop": 17.84,
+                            "pop": 56379,
+                            "city": "Encinitas"
+                        }, {
+                            "zip": "92129",
+                            "count": 9321,
+                            "rate_per_100k": 177.1,
+                            "pct_pop": 17.71,
+                            "pop": 52631,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92009",
+                            "count": 7551,
+                            "rate_per_100k": 174.2,
+                            "pct_pop": 17.42,
+                            "pop": 43347,
+                            "city": "Carlsbad"
+                        }, {
+                            "zip": "91913",
+                            "count": 8634,
+                            "rate_per_100k": 169,
+                            "pct_pop": 16.9,
+                            "pop": 51089,
+                            "city": "Chula Vista"
+                        }, {
+                            "zip": "92029",
+                            "count": 3488,
+                            "rate_per_100k": 164.5,
+                            "pct_pop": 16.45,
+                            "pop": 21204,
+                            "city": "Escondido"
+                        }, {
+                            "zip": "92117",
+                            "count": 8528,
+                            "rate_per_100k": 163.6,
+                            "pct_pop": 16.36,
+                            "pop": 52127,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92064",
+                            "count": 8249,
+                            "rate_per_100k": 163.5,
+                            "pct_pop": 16.35,
+                            "pop": 50453,
+                            "city": "Poway"
+                        }, {
+                            "zip": "91915",
+                            "count": 5084,
+                            "rate_per_100k": 163.4,
+                            "pct_pop": 16.34,
+                            "pop": 31114,
+                            "city": "Chula Vista"
+                        }, {
+                            "zip": "91942",
+                            "count": 6374,
+                            "rate_per_100k": 159.2,
+                            "pct_pop": 15.92,
+                            "pop": 40038,
+                            "city": "La Mesa"
+                        }, {
+                            "zip": "91901",
+                            "count": 2808,
+                            "rate_per_100k": 156.1,
+                            "pct_pop": 15.61,
+                            "pop": 17988,
+                            "city": "Alpine"
+                        }, {
+                            "zip": "92008",
+                            "count": 4602,
+                            "rate_per_100k": 155.2,
+                            "pct_pop": 15.52,
+                            "pop": 29652,
+                            "city": "Carlsbad"
+                        }, {
+                            "zip": "91910",
+                            "count": 12956,
+                            "rate_per_100k": 154.5,
+                            "pct_pop": 15.45,
+                            "pop": 83858,
+                            "city": "Chula Vista"
+                        }, {
+                            "zip": "92127",
+                            "count": 7627,
+                            "rate_per_100k": 154,
+                            "pct_pop": 15.4,
+                            "pop": 49526,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92139",
+                            "count": 5062,
+                            "rate_per_100k": 152.1,
+                            "pct_pop": 15.21,
+                            "pop": 33281,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92126",
+                            "count": 11355,
+                            "rate_per_100k": 148,
+                            "pct_pop": 14.8,
+                            "pop": 76723,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92019",
+                            "count": 6610,
+                            "rate_per_100k": 146.6,
+                            "pct_pop": 14.66,
+                            "pop": 45089,
+                            "city": "El Cajon"
+                        }, {
+                            "zip": "92107",
+                            "count": 4529,
+                            "rate_per_100k": 146.2,
+                            "pct_pop": 14.62,
+                            "pop": 30978,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92111",
+                            "count": 7008,
+                            "rate_per_100k": 146.2,
+                            "pct_pop": 14.62,
+                            "pop": 47934,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92110",
+                            "count": 4320,
+                            "rate_per_100k": 144.6,
+                            "pct_pop": 14.46,
+                            "pop": 29876,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92114",
+                            "count": 8377,
+                            "rate_per_100k": 144.4,
+                            "pct_pop": 14.44,
+                            "pop": 58012,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "91911",
+                            "count": 12218,
+                            "rate_per_100k": 144,
+                            "pct_pop": 14.4,
+                            "pop": 84847,
+                            "city": "Chula Vista"
+                        }, {
+                            "zip": "92154",
+                            "count": 11403,
+                            "rate_per_100k": 142.5,
+                            "pct_pop": 14.25,
+                            "pop": 80021,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92056",
+                            "count": 7781,
+                            "rate_per_100k": 140.5,
+                            "pct_pop": 14.05,
+                            "pop": 55381,
+                            "city": "Oceanside"
+                        }, {
+                            "zip": "92116",
+                            "count": 5180,
+                            "rate_per_100k": 140.2,
+                            "pct_pop": 14.02,
+                            "pop": 36947,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92124",
+                            "count": 4423,
+                            "rate_per_100k": 139.5,
+                            "pct_pop": 13.95,
+                            "pop": 31706,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92123",
+                            "count": 4653,
+                            "rate_per_100k": 138.3,
+                            "pct_pop": 13.83,
+                            "pop": 33644,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92078",
+                            "count": 6925,
+                            "rate_per_100k": 135.9,
+                            "pct_pop": 13.59,
+                            "pop": 50957,
+                            "city": "San Marcos"
+                        }, {
+                            "zip": "92082",
+                            "count": 2402,
+                            "rate_per_100k": 135.9,
+                            "pct_pop": 13.59,
+                            "pop": 17675,
+                            "city": "Valley Center"
+                        }, {
+                            "zip": "92071",
+                            "count": 7694,
+                            "rate_per_100k": 132.2,
+                            "pct_pop": 13.22,
+                            "pop": 58200,
+                            "city": "Santee"
+                        }, {
+                            "zip": "92109",
+                            "count": 7022,
+                            "rate_per_100k": 129.8,
+                            "pct_pop": 12.98,
+                            "pop": 54099,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92020",
+                            "count": 8009,
+                            "rate_per_100k": 129.4,
+                            "pct_pop": 12.94,
+                            "pop": 61893,
+                            "city": "El Cajon"
+                        }, {
+                            "zip": "92102",
+                            "count": 5429,
+                            "rate_per_100k": 128.3,
+                            "pct_pop": 12.83,
+                            "pop": 42315,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "91945",
+                            "count": 3450,
+                            "rate_per_100k": 126.8,
+                            "pct_pop": 12.68,
+                            "pop": 27208,
+                            "city": "Lemon Grove"
+                        }, {
+                            "zip": "92108",
+                            "count": 3429,
+                            "rate_per_100k": 125.4,
+                            "pct_pop": 12.54,
+                            "pop": 27344,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "91977",
+                            "count": 7384,
+                            "rate_per_100k": 121.1,
+                            "pct_pop": 12.11,
+                            "pop": 60974,
+                            "city": "Spring Valley"
+                        }, {
+                            "zip": "92104",
+                            "count": 6311,
+                            "rate_per_100k": 121.1,
+                            "pct_pop": 12.11,
+                            "pop": 52114,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "91950",
+                            "count": 7073,
+                            "rate_per_100k": 120.8,
+                            "pct_pop": 12.08,
+                            "pop": 58551,
+                            "city": "National City"
+                        }, {
+                            "zip": "92101",
+                            "count": 7240,
+                            "rate_per_100k": 119.3,
+                            "pct_pop": 11.93,
+                            "pop": 60687,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92026",
+                            "count": 6502,
+                            "rate_per_100k": 115.5,
+                            "pct_pop": 11.55,
+                            "pop": 56294,
+                            "city": "Escondido"
+                        }, {
+                            "zip": "92065",
+                            "count": 4110,
+                            "rate_per_100k": 113.4,
+                            "pct_pop": 11.34,
+                            "pop": 36243,
+                            "city": "Ramona"
+                        }, {
+                            "zip": "92028",
+                            "count": 5493,
+                            "rate_per_100k": 112.1,
+                            "pct_pop": 11.21,
+                            "pop": 49001,
+                            "city": "Fallbrook"
+                        }, {
+                            "zip": "92040",
+                            "count": 4880,
+                            "rate_per_100k": 110.6,
+                            "pct_pop": 11.06,
+                            "pop": 44123,
+                            "city": "Lakeside"
+                        }, {
+                            "zip": "92115",
+                            "count": 6706,
+                            "rate_per_100k": 109.1,
+                            "pct_pop": 10.91,
+                            "pop": 61467,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92081",
+                            "count": 3562,
+                            "rate_per_100k": 108.3,
+                            "pct_pop": 10.83,
+                            "pop": 32890,
+                            "city": "Vista"
+                        }, {
+                            "zip": "92057",
+                            "count": 5980,
+                            "rate_per_100k": 107.3,
+                            "pct_pop": 10.73,
+                            "pop": 55732,
+                            "city": "Oceanside"
+                        }, {
+                            "zip": "91932",
+                            "count": 2829,
+                            "rate_per_100k": 103.1,
+                            "pct_pop": 10.31,
+                            "pop": 27439,
+                            "city": "Imperial Beach"
+                        }, {
+                            "zip": "92021",
+                            "count": 6905,
+                            "rate_per_100k": 100.6,
+                            "pct_pop": 10.06,
+                            "pop": 68638,
+                            "city": "El Cajon"
+                        }, {
+                            "zip": "92027",
+                            "count": 5368,
+                            "rate_per_100k": 99,
+                            "pct_pop": 9.9,
+                            "pop": 54222,
+                            "city": "Escondido"
+                        }, {
+                            "zip": "92025",
+                            "count": 4989,
+                            "rate_per_100k": 96.3,
+                            "pct_pop": 9.63,
+                            "pop": 51807,
+                            "city": "Escondido"
+                        }, {
+                            "zip": "92069",
+                            "count": 4862,
+                            "rate_per_100k": 95,
+                            "pct_pop": 9.5,
+                            "pop": 51179,
+                            "city": "San Marcos"
+                        }, {
+                            "zip": "92084",
+                            "count": 4566,
+                            "rate_per_100k": 93.1,
+                            "pct_pop": 9.31,
+                            "pop": 49044,
+                            "city": "Vista"
+                        }, {
+                            "zip": "92054",
+                            "count": 3868,
+                            "rate_per_100k": 91.1,
+                            "pct_pop": 9.11,
+                            "pop": 42459,
+                            "city": "Oceanside"
+                        }, {
+                            "zip": "92105",
+                            "count": 5785,
+                            "rate_per_100k": 86.2,
+                            "pct_pop": 8.62,
+                            "pop": 67111,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92058",
+                            "count": 2070,
+                            "rate_per_100k": 85.6,
+                            "pct_pop": 8.56,
+                            "pop": 24182,
+                            "city": "Oceanside"
+                        }, {
+                            "zip": "92083",
+                            "count": 2920,
+                            "rate_per_100k": 74.6,
+                            "pct_pop": 7.46,
+                            "pop": 39142,
+                            "city": "Vista"
+                        }, {
+                            "zip": "92113",
+                            "count": 3519,
+                            "rate_per_100k": 72.5,
+                            "pct_pop": 7.25,
+                            "pop": 48538,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92093",
+                            "count": 655,
+                            "rate_per_100k": 58,
+                            "pct_pop": 5.8,
+                            "pop": 11293,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92136",
+                            "count": 7,
+                            "rate_per_100k": 0.6,
+                            "pct_pop": 0.06,
+                            "pop": 11667,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "91905",
+                            "count": 198,
+                            "rate_per_100k": 97.11,
+                            "pct_pop": 9.71,
+                            "pop": 2039,
+                            "city": "Boulevard"
+                        }, {
+                            "zip": "91906",
+                            "count": 459,
+                            "rate_per_100k": 123.45,
+                            "pct_pop": 12.35,
+                            "pop": 3718,
+                            "city": "Campo"
+                        }, {
+                            "zip": "91916",
+                            "count": 255,
+                            "rate_per_100k": 117.89,
+                            "pct_pop": 11.79,
+                            "pop": 2163,
+                            "city": "Descanso"
+                        }, {
+                            "zip": "91917",
+                            "count": 129,
+                            "rate_per_100k": 152.12,
+                            "pct_pop": 15.21,
+                            "pop": 848,
+                            "city": "Dulzura"
+                        }, {
+                            "zip": "91931",
+                            "count": 37,
+                            "rate_per_100k": 84.67,
+                            "pct_pop": 8.47,
+                            "pop": 437,
+                            "city": "Guatay"
+                        }, {
+                            "zip": "91934",
+                            "count": 88,
+                            "rate_per_100k": 78.29,
+                            "pct_pop": 7.83,
+                            "pop": 1124,
+                            "city": "Jacumba"
+                        }, {
+                            "zip": "91935",
+                            "count": 1511,
+                            "rate_per_100k": 177.08,
+                            "pct_pop": 17.71,
+                            "pop": 8533,
+                            "city": "Jamul"
+                        }, {
+                            "zip": "91948",
+                            "count": 8,
+                            "rate_per_100k": 15.78,
+                            "pct_pop": 1.58,
+                            "pop": 507,
+                            "city": "Mount Laguna"
+                        }, {
+                            "zip": "91962",
+                            "count": 286,
+                            "rate_per_100k": 171.36,
+                            "pct_pop": 17.14,
+                            "pop": 1669,
+                            "city": "Pine Valley"
+                        }, {
+                            "zip": "91963",
+                            "count": 108,
+                            "rate_per_100k": 111.8,
+                            "pct_pop": 11.18,
+                            "pop": 966,
+                            "city": "Potrero"
+                        }, {
+                            "zip": "91978",
+                            "count": 1210,
+                            "rate_per_100k": 147.85,
+                            "pct_pop": 14.78,
+                            "pop": 8184,
+                            "city": "Spring Valley"
+                        }, {
+                            "zip": "91980",
+                            "count": 107,
+                            "rate_per_100k": 554.4,
+                            "pct_pop": 55.44,
+                            "pop": 193,
+                            "city": "Tecate"
+                        }, {
+                            "zip": "92003",
+                            "count": 612,
+                            "rate_per_100k": 134.15,
+                            "pct_pop": 13.42,
+                            "pop": 4562,
+                            "city": "Bonsall"
+                        }, {
+                            "zip": "92004",
+                            "count": 1064,
+                            "rate_per_100k": 228.52,
+                            "pct_pop": 22.85,
+                            "pop": 4656,
+                            "city": "Borrego Springs"
+                        }, {
+                            "zip": "92036",
+                            "count": 620,
+                            "rate_per_100k": 141.91,
+                            "pct_pop": 14.19,
+                            "pop": 4369,
+                            "city": "Julian"
+                        }, {
+                            "zip": "92059",
+                            "count": 162,
+                            "rate_per_100k": 101.06,
+                            "pct_pop": 10.11,
+                            "pop": 1603,
+                            "city": "Pala"
+                        }, {
+                            "zip": "92060",
+                            "count": 41,
+                            "rate_per_100k": 44.86,
+                            "pct_pop": 4.49,
+                            "pop": 914,
+                            "city": "Palomar Mountain"
+                        }, {
+                            "zip": "92061",
+                            "count": 461,
+                            "rate_per_100k": 168.8,
+                            "pct_pop": 16.88,
+                            "pop": 2731,
+                            "city": "Pauma Valley"
+                        }, {
+                            "zip": "92066",
+                            "count": 32,
+                            "rate_per_100k": 79.8,
+                            "pct_pop": 7.98,
+                            "pop": 401,
+                            "city": "Ranchita"
+                        }, {
+                            "zip": "92067",
+                            "count": 3001,
+                            "rate_per_100k": 296.66,
+                            "pct_pop": 29.67,
+                            "pop": 10116,
+                            "city": "Rancho Santa Fe"
+                        }, {
+                            "zip": "92070",
+                            "count": 198,
+                            "rate_per_100k": 198.99,
+                            "pct_pop": 19.9,
+                            "pop": 995,
+                            "city": "Santa Ysabel"
+                        }, {
+                            "zip": "92086",
+                            "count": 122,
+                            "rate_per_100k": 82.21,
+                            "pct_pop": 8.22,
+                            "pop": 1484,
+                            "city": "Warner Springs"
+                        }, {
+                            "zip": "92091",
+                            "count": 459,
+                            "rate_per_100k": 231.94,
+                            "pct_pop": 23.19,
+                            "pop": 1979,
+                            "city": "Rancho Santa Fe"
+                        }, {
+                            "zip": "92121",
+                            "count": 1196,
+                            "rate_per_100k": 242.25,
+                            "pct_pop": 24.23,
+                            "pop": 4937,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92134",
+                            "count": 6,
+                            "rate_per_100k": 18.87,
+                            "pct_pop": 1.89,
+                            "pop": 318,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92145",
+                            "count": 8,
+                            "rate_per_100k": 10.06,
+                            "pct_pop": 1.01,
+                            "pop": 795,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92155",
+                            "count": 6,
+                            "rate_per_100k": 5.4,
+                            "pct_pop": 0.54,
+                            "pop": 1111,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92182",
+                            "count": 6,
+                            "rate_per_100k": 2.74,
+                            "pct_pop": 0.27,
+                            "pop": 2188,
+                            "city": "San Diego"
+                        }, {
+                            "zip": "92536",
+                            "count": 81,
+                            "rate_per_100k": 178.02,
+                            "pct_pop": 17.8,
+                            "pop": 455,
+                            "city": "Aguanga"
+                        }, {
+                            "zip": "92672",
+                            "count": 375,
+                            "rate_per_100k": 80.92,
+                            "pct_pop": 8.09,
+                            "pop": 4634,
+                            "city": "San Clemente"
+                        }
+                    ];
+                    this.dataLookup = {};
+                    this.data.forEach(d => {
+                        this.dataLookup[d.zip] = d
+                    })
+                    console.log(this.dataLookup)
+
+                }
+
+                initMap() {
+                    const nav = new mapboxgl.NavigationControl();
+                    this.map.addControl(nav, "bottom-right");
+                    this.map.on("load", () => { // Add source for zipcode polygons hosted on Mapbox
+                        this.map.addSource("san_diego_zip_codes_complete-2rvee1", {
+                            type: "vector",
+                            url: "mapbox://kpbs.5ils2sdv"
+                        });
+                        // Add layer from the vector tile source with data-driven style
+
+                        const maxValue = Math.max(...this.data.map(d => d.pct_pop))
+                        let numbers = [
+                            Math.round(maxValue * .12),
+                            Math.round(maxValue * .25),
+                            Math.round(maxValue * .50),
+                            Math.round(maxValue * .75),
+                            maxValue
+                        ]
+
+                        let colors_hex = [
+                            "#9ccfb7",
+                            "#85c2b6",
+                            "#42a09c",
+                            "#2c9294",
+                            "#006d7c",
+                            "#004862",
+                            "#003552"
+                        ]
+                        let fillColors = this.fillColors(numbers, colors_hex);
+
+                        if (fillColors) {
+                            this.map.addLayer({
+                                id: "san_diego_zip_codes_join",
+                                type: "fill",
+                                source: "san_diego_zip_codes_complete-2rvee1",
+                                "source-layer": "san_diego_zip_codes_complete-2rvee1",
+                                paint: {
+                                    "fill-color": fillColors["expression"],
+                                    "fill-opacity": 0.7
+                                }
+                            }, "waterway-label");
+                            this.initMapLegend(fillColors["colors"], numbers);
+                        }
+                        pymChild.sendHeight();
+                    });
+
+                    this.map.on("click", (e) => {
+                        let features = this.map.queryRenderedFeatures(e.point, {layers: ["san_diego_zip_codes_join"]});
+                        if (features && features.length > 0) {
+                            this.addPopUpAndHighlightMap(features);
+                        } else {
+                            this.dataContainer.style.display = "none";
+                            if (this.map.getLayer("highlight")) {
+                                this.map.removeLayer("highlight");
+                            }
+                        }
+                    });
+                }
+
+                addCommas(nStr) {
+                    nStr += "";
+                    let x = nStr.split(".");
+                    let x1 = x[0];
+                    let x2 = x.length > 1 ? "." + x[1] : "";
+                    let rgx = /(\d+)(\d{3})/;
+                    while (rgx.test(x1)) {
+                        x1 = x1.replace(rgx, "$1" + "," + "$2");
+                    }
+                    return x1 + x2;
+                }
+
+                fillColors(numbers, colors) {
+                    let expression = [
+                        "match",
+                        [
+                            "get", "postal-code"
+                        ]
+                    ];
+                    let colors_arr = [];
+                    this.data.filter((row) => row.pct_pop !== 0).forEach((row) => {
+                        if (isNaN(row.pct_pop)) {
+                            colors_arr.push(colors[0]);
+                            expression.push(row.zip, colors[0]);
+                            return;
+                        }
+
+                        for (let i = 0; i < numbers.length; ++ i) {
+                            if (row.pct_pop <= numbers[i]) {
+                                colors_arr.push(colors[i]);
+                                expression.push(row.zip, colors[i]);
+                                break;
+                            }
+                        }
+                    });
+
+                    // Last value is the default, used where there is no data
+                    expression.push("rgba(0,0,0,0)");
+                    return {expression: expression, colors: colors};
+                }
+
+                addPopUpAndHighlightMap(features) {
+                    let statsHTML;
+                    let postalCode = features[0].properties["postal-code"];
+                    const d = this.dataLookup[postalCode];
+                    statsHTML = `
+                <table class="popup-stats">
+                  <tr>
+                    <th scope="row">City</th>
+                    <td>${
+                        d.city
+                    }</td>
+                  <tr>
+                  </tr>
+                  <tr>
+                    <th scope="row">ZIP Code</th>
+                    <td>${postalCode}</td>
+                  </tr>
+                 
+                    <th scope="row">Population</th>
+                    <td>${
+                        d.pop
+                    }</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Vaccinated</th>
+                    <td>${
+                        d.count
+                    }</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Percent Vaccinated</th>
+                    <td>${
+                        d.pct_pop
+                    }</td>
+                  </tr>
+                </table>
+              `;
+
+                    if (statsHTML) {
+                        let coordinate_array = features[0].geometry.type === "Polygon" ? features[0].geometry.coordinates[0][0] : features[0].geometry.coordinates[0][0][0];
+                        let lnglat = {
+                            lng: coordinate_array[0],
+                            lat: coordinate_array[1]
+                        };
+                        this.addMapHighlight(features);
+                        this.dataContainer.style.display = "inline";
+                        this.dataContainer.innerHTML = statsHTML;
+                    }
+                }
+
+                initMapLegend(colors_arr, numbers) { // COLORS
+                    const legendColors = document.querySelector("#legend-colors");
+                    legendColors.innerHTML = ``;
+                    let legendHTML = ``;
+                    for (let i = 0; i < numbers.length; ++ i) {
+                        legendHTML = legendHTML.concat(`<div class="color" style="background-color: ${
+                            colors_arr[i]
+                        }; opacity: 1">&lt;= ${
+                            numbers[i]
+                        }%</div>`);
+                    }
+                    legendColors.innerHTML = legendHTML;
+                }
+
+                addMapHighlight(features) {
+                    const highlightSource = this.map.getSource("highlight");
+                    const highlightLayer = this.map.getLayer("highlight");
+                    let coordinates = features[0].geometry.coordinates;
+                    let type = features[0].geometry.type;
+
+                    let flyToCoordinates = type === "Polygon" ? coordinates[0][0] : coordinates[0][0][0];
+                    this.map.flyTo({center: flyToCoordinates});
+
+                    if (highlightSource) {
+                        highlightSource.setData({
+                            type: "Feature",
+                            geometry: {
+                                type: type,
+                                coordinates: coordinates
+                            }
+                        });
+                    } else {
+                        this.map.addSource("highlight", {
+                            type: "geojson",
+                            data: {
+                                type: "Feature",
+                                geometry: {
+                                    type: type,
+                                    coordinates: coordinates
+                                }
+                            }
+                        });
+                    }
+
+                    if (! highlightLayer) {
+                        this.map.addLayer({
+                            id: "highlight",
+                            type: "fill",
+                            source: "highlight",
+                            layout: {},
+                            paint: {
+                                "fill-color": "#f00",
+                                "fill-opacity": 0.5
+                            }
+                        });
+                    }
+                }
+
+            }
+        </script>
+
+        <script>
+            const kpbsCovidZipMap = new covidZipMap();
+            let pymChild = new pym.Child();
+
+            let onWindowLoaded = () => {
+                pymChild.sendHeight()
+            }
+
+            window.addEventListener('load', onWindowLoaded);
+        </script>
+    </body>
+
+</html>
